@@ -1,12 +1,70 @@
+use crate::shared::types::{ProjectStatus, SkillCategory, SkillLevel};
+use chrono::{Date, DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
-#[derive(Clone, Debug)]
-pub enum AppEvent {
-    SkillAdded { skill_id: String },
-    ProjectUpdated { project_id: String },
-    ContentChanged,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EventMetadata {
+    pub event_id: String,
+    pub event_type: String,
+    pub timestamp: DateTime<Utc>,
+    pub source: String,
 }
 
+pub trait DomainEvent: Send + Sync {
+    fn metadata(&self) -> &EventMetadata;
+    fn event_type(&self) -> &str;
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillCreated {
+    pub metadata: EventMetadata,
+    pub skill_id: String,
+    pub skill_name: String,
+    pub category: SkillCategory,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillUpdated {
+    pub metadata: EventMetadata,
+    pub skill_id: String,
+    pub old_level: SkillLevel,
+    pub new_level: SkillLevel,
+    pub changed_fields: Vec<String>, // Какие поля изменились
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillDeleted {
+    pub metadata: EventMetadata,
+    pub skill_id: String,
+    pub skill_name: String,
+}
+
+// События для проектов
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectPublished {
+    pub metadata: EventMetadata,
+    pub project_id: String,
+    pub project_name: String,
+    pub published_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectStatusChanged {
+    pub metadata: EventMetadata,
+    pub project_id: String,
+    pub old_status: ProjectStatus,
+    pub new_status: ProjectStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AppEvent {
+    SkillCreated(SkillCreated),
+    SkillUpdated(SkillUpdated),
+    SkillDeleted(SkillDeleted),
+    ProjectPublished(ProjectPublished),
+    ProjectStatusChanged(ProjectStatusChanged),
+}
 #[derive(Clone)]
 pub struct EventBus {
     sender: broadcast::Sender<AppEvent>,
@@ -18,7 +76,7 @@ impl EventBus {
         Self { sender }
     }
 
-    pub fn publish(&self, event: AppEvent) -> Result<(), broadcast::error::SendError<AppEvent>> {
+    pub fn publish(&self, event: AppEvent) -> Result<usize, broadcast::error::SendError<AppEvent>> {
         self.sender.send(event)
     }
 

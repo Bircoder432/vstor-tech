@@ -1,4 +1,7 @@
-use crate::shared::events::{AppEvent, EventBus};
+use crate::shared::{
+    events::{AppEvent, EventBus},
+    types::SkillCategory,
+};
 
 pub struct BackendEventSystem {
     event_bus: EventBus,
@@ -9,8 +12,13 @@ impl BackendEventSystem {
         Self { event_bus }
     }
 
-    pub async fn skill_added(&self, skill_id: String) {
-        let event = AppEvent::SkillAdded { skill_id };
+    pub async fn skill_added(
+        &self,
+        skill_id: String,
+        skill_name: String,
+        skill_category: SkillCategory,
+    ) {
+        todo!();
         self.event_bus.publish(event).ok();
     }
 
