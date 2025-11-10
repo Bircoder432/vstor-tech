@@ -1,4 +1,3 @@
-// backend/services/mod.rs
 pub mod project_service;
 pub mod skill_service;
 

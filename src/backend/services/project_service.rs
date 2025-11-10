@@ -1,9 +1,8 @@
-// backend/services/project_service.rs
 use crate::backend::repositories::ProjectRepository;
 use crate::domain::entities::Project;
 use crate::domain::errors::DomainError;
 use crate::domain::types::{ContentVisibility, ProjectStatus};
-use crate::shared::types::{ProjectUrl, UrlType};
+use crate::shared::types::{ImageSource, ProjectUrl, UrlType};
 
 pub struct ProjectService<R: ProjectRepository> {
     repo: R,
@@ -100,8 +99,6 @@ impl<R: ProjectRepository> ProjectService<R> {
             .map_err(|e| DomainError::BusinessRule(e.to_string()))?
             .ok_or_else(|| DomainError::BusinessRule("Project not found".to_string()))?;
 
-        // В домене должен быть метод для смены статуса с валидацией
-        // project.set_status(new_status)?;
         project.validate()?;
 
         let project = self
@@ -121,15 +118,12 @@ impl<R: ProjectRepository> ProjectService<R> {
             .map_err(|e| DomainError::BusinessRule(e.to_string()))?
             .ok_or_else(|| DomainError::BusinessRule("Project not found".to_string()))?;
 
-        // Бизнес-логика featured
         if !project.is_visible() {
             return Err(DomainError::BusinessRule(
                 "Only public projects can be featured".to_string(),
             ));
         }
 
-        // Нужно добавить метод в Project для установки featured с валидацией
-        // project.set_featured(true)?;
         project.validate()?;
 
         let project = self
@@ -149,7 +143,6 @@ impl<R: ProjectRepository> ProjectService<R> {
             .map_err(|e| DomainError::BusinessRule(e.to_string()))?
             .ok_or_else(|| DomainError::BusinessRule("Project not found".to_string()))?;
 
-        // project.set_featured(false)?;
         project.validate()?;
 
         let project = self
@@ -166,6 +159,145 @@ impl<R: ProjectRepository> ProjectService<R> {
             .delete(id)
             .await
             .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+    pub async fn update_project_name(
+        &self,
+        id: &str,
+        new_name: String,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.set_name(new_name)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_project_image(
+        &self,
+        id: &str,
+        image: Option<ImageSource>,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.set_image(image);
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn remove_project_url(
+        &self,
+        project_id: &str,
+        url: ProjectUrl,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(project_id).await?;
+        project.remove_url(url)?;
+        project.validate()?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_project_featured(
+        &self,
+        id: &str,
+        featured: bool,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.set_featured(featured)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_project_description(
+        &self,
+        id: &str,
+        description: String,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.set_description(description)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_project_long_description(
+        &self,
+        id: &str,
+        long_description: String,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.set_long_description(long_description)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_project_visibility(
+        &self,
+        id: &str,
+        visibility: ContentVisibility,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.set_visibility(visibility)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_project_dates(
+        &self,
+        id: &str,
+        start_date: Option<chrono::NaiveDate>,
+        end_date: Option<chrono::NaiveDate>,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.set_dates(start_date, end_date)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn remove_project_technology(
+        &self,
+        id: &str,
+        tech: String,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.remove_technology(&tech)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn add_project_technology(
+        &self,
+        id: &str,
+        tech: String,
+    ) -> Result<Project, DomainError> {
+        let mut project = self.get_project_by_id(id).await?;
+        project.add_technology(tech)?;
+        self.repo
+            .save(project)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    async fn get_project_by_id(&self, id: &str) -> Result<Project, DomainError> {
+        self.repo
+            .find_by_id(id)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))?
+            .ok_or_else(|| DomainError::BusinessRule("Project not found".to_string()))
     }
 }
 

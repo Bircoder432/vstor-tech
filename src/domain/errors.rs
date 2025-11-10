@@ -20,9 +20,6 @@ pub enum SkillError {
     #[error("Skill name too short: {0}")]
     NameTooShort(String),
 
-    #[error("Negative years of experience: {0}")]
-    NegativeExperience(f32),
-
     #[error("Skill already exists: {0}")]
     AlreadyExists(String),
 }

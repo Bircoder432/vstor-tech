@@ -1,4 +1,3 @@
-// backend/repositories/project_repo.rs
 use crate::backend::errors::DbError;
 use crate::domain::entities::Project;
 use crate::domain::types::{ContentVisibility, ProjectStatus};

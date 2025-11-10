@@ -1,7 +1,9 @@
+use crate::backend::errors::BackendError;
 use crate::backend::repositories::SkillRepository;
 use crate::domain::entities::Skill;
 use crate::domain::errors::DomainError;
-use crate::domain::types::{SkillCategory, SkillLevel};
+use crate::domain::types::{ContentVisibility, SkillCategory, SkillLevel};
+use crate::shared::types::ImageSource;
 use async_trait::async_trait;
 
 pub struct SkillService<R: SkillRepository> {
@@ -77,26 +79,101 @@ impl<R: SkillRepository> SkillService<R> {
         id: &str,
         new_level: SkillLevel,
     ) -> Result<Skill, DomainError> {
-        let mut skill = self
-            .repo
-            .find_by_id(id)
-            .await
-            .map_err(|e| DomainError::BusinessRule(e.to_string()))?
-            .ok_or_else(|| DomainError::BusinessRule("Skill not found".to_string()))?;
-
-        //TODO: make removing skill
-        let skill = self
-            .repo
+        let mut skill = self.get_skill_by_id(id).await?;
+        skill.set_level(new_level)?;
+        self.repo
             .save(skill)
             .await
-            .map_err(|e| DomainError::BusinessRule(e.to_string()))?;
-
-        Ok(skill)
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
     }
 
     pub async fn delete_skill(&self, id: &str) -> Result<(), DomainError> {
         self.repo
             .delete(id)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+    pub async fn update_skill_name(
+        &self,
+        id: &str,
+        new_name: String,
+    ) -> Result<Skill, DomainError> {
+        let mut skill = self.get_skill_by_id(id).await?;
+        skill.set_name(new_name)?;
+        self.repo
+            .save(skill)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_skill_category(
+        &self,
+        id: &str,
+        category: SkillCategory,
+    ) -> Result<Skill, DomainError> {
+        let mut skill = self.get_skill_by_id(id).await?;
+        skill.set_category(category)?;
+        self.repo
+            .save(skill)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_skill_description(
+        &self,
+        id: &str,
+        description: String,
+    ) -> Result<Skill, DomainError> {
+        let mut skill = self.get_skill_by_id(id).await?;
+        skill.update_description(description)?;
+        self.repo
+            .save(skill)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_skill_years_of_experience(
+        &self,
+        id: &str,
+        years: u8,
+    ) -> Result<Skill, DomainError> {
+        let mut skill = self.get_skill_by_id(id).await?;
+        skill.set_years_of_experience(years)?;
+        self.repo
+            .save(skill)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    pub async fn update_skill_visibility(
+        &self,
+        id: &str,
+        visibility: ContentVisibility,
+    ) -> Result<Skill, DomainError> {
+        let mut skill = self.get_skill_by_id(id).await?;
+        skill.set_visibility(visibility)?;
+        self.repo
+            .save(skill)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))
+    }
+
+    async fn get_skill_by_id(&self, id: &str) -> Result<Skill, DomainError> {
+        self.repo
+            .find_by_id(id)
+            .await
+            .map_err(|e| DomainError::BusinessRule(e.to_string()))?
+            .ok_or_else(|| DomainError::BusinessRule("Skill not found".to_string()))
+    }
+    pub async fn update_skill_image(
+        &self,
+        id: &str,
+        image: Option<ImageSource>,
+    ) -> Result<Skill, DomainError> {
+        let mut skill = self.get_skill_by_id(id).await?;
+        skill.set_image(image)?;
+        self.repo
+            .save(skill)
             .await
             .map_err(|e| DomainError::BusinessRule(e.to_string()))
     }

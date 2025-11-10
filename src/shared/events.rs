@@ -1,5 +1,5 @@
-use crate::shared::types::{ProjectStatus, SkillCategory, SkillLevel};
-use chrono::{Date, DateTime, Utc};
+use crate::domain::types::{ProjectStatus, SkillCategory, SkillLevel};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
@@ -17,6 +17,12 @@ pub trait DomainEvent: Send + Sync {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectUpdated {
+    pub metadata: EventMetadata,
+    pub project_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillCreated {
     pub metadata: EventMetadata,
     pub skill_id: String,
@@ -30,7 +36,6 @@ pub struct SkillUpdated {
     pub skill_id: String,
     pub old_level: SkillLevel,
     pub new_level: SkillLevel,
-    pub changed_fields: Vec<String>, // Какие поля изменились
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +45,6 @@ pub struct SkillDeleted {
     pub skill_name: String,
 }
 
-// События для проектов
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectPublished {
     pub metadata: EventMetadata,
@@ -64,6 +68,7 @@ pub enum AppEvent {
     SkillDeleted(SkillDeleted),
     ProjectPublished(ProjectPublished),
     ProjectStatusChanged(ProjectStatusChanged),
+    ProjectUpdated(ProjectUpdated),
 }
 #[derive(Clone)]
 pub struct EventBus {

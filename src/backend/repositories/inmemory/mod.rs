@@ -1,4 +1,3 @@
-// backend/repositories/inmemory/mod.rs
 pub mod project_repo;
 pub mod skill_repo;
 

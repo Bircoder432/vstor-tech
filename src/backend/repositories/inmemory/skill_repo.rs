@@ -1,4 +1,3 @@
-// backend/repositories/inmemory/skill_repo.rs
 use crate::backend::errors::DbError;
 use crate::backend::repositories::SkillRepository;
 use crate::domain::entities::Skill;
