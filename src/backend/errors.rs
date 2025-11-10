@@ -1,9 +1,14 @@
 use thiserror::Error;
 
+use crate::domain::errors::DomainError;
+
 #[derive(Error, Debug)]
 pub enum BackendError {
     #[error("Database error: {0}")]
     Database(#[from] DbError),
+
+    #[error("Domain error: {0}")]
+    Domain(#[from] DomainError),
 
     #[error("API error: {0}")]
     Api(#[from] ApiError),
