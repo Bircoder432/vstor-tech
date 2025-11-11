@@ -1,0 +1,416 @@
+==========================================
+СОБРАННЫЙ ИСХОДНЫЙ КОД
+Дата: Пн 10 ноя 2025 23:36:59 +05
+Папка: /home/vstor/Проекты/oss/myself/vstor-tech/src/frontend
+==========================================
+
+==========================================
+ФАЙЛ: ./errors.rs
+РАЗМЕР: 311 байт
+==========================================
+use thiserror::Error;
+
+#[derive(Error, Debug, Clone)]
+pub enum FrontendError {
+    #[error("Network error: {0}")]
+    Network(String),
+
+    #[error("Rendering error: {0}")]
+    Render(String),
+
+    #[error("State error: {0}")]
+    State(String),
+
+    #[error("User input error: {0}")]
+    Validation(String),
+}
+
+
+==========================================
+ФАЙЛ: ./event_handler.rs
+РАЗМЕР: 3727 байт
+==========================================
+use crate::shared::events::{
+    AppEvent, EventBus, ProjectPublished, ProjectStatusChanged, ProjectUpdated, SkillCreated,
+    SkillDeleted, SkillUpdated,
+};
+use leptos::*;
+use logging::log;
+use tokio::task::spawn_local;
+
+pub struct FrontendEventHandler {
+    event_bus: EventBus,
+
+    trigger_skills: RwSignal<u32>,
+    trigger_projects: RwSignal<u32>,
+    trigger_content: RwSignal<u32>,
+}
+
+impl FrontendEventHandler {
+    pub fn new(
+        event_bus: EventBus,
+        trigger_skills: RwSignal<u32>,
+        trigger_projects: RwSignal<u32>,
+        trigger_content: RwSignal<u32>,
+    ) -> Self {
+        let handler = Self {
+            event_bus,
+            trigger_skills,
+            trigger_projects,
+            trigger_content,
+        };
+        handler.start_listening();
+        handler
+    }
+
+    fn start_listening(&self) {
+        let mut receiver = self.event_bus.subscribe();
+        let trigger_skills = self.trigger_skills;
+        let trigger_projects = self.trigger_projects;
+        let trigger_content = self.trigger_content;
+
+        spawn_local(async move {
+            while let Ok(event) = receiver.recv().await {
+                log!("Received event: {:?}", event);
+                match event {
+                    AppEvent::SkillCreated(SkillCreated { skill_id, .. }) => {
+                        trigger_skills.update(|n| *n += 1);
+                        Self::handle_skill_added(skill_id).await;
+                    }
+                    AppEvent::SkillUpdated(SkillUpdated { skill_id, .. }) => {
+                        trigger_skills.update(|n| *n += 1);
+                        Self::handle_skill_updated(skill_id).await;
+                    }
+                    AppEvent::SkillDeleted(SkillDeleted { skill_id, .. }) => {
+                        trigger_skills.update(|n| *n += 1);
+                        Self::handle_skill_deleted(skill_id).await;
+                    }
+
+                    AppEvent::ProjectUpdated(ProjectUpdated { project_id, .. }) => {
+                        trigger_projects.update(|n| *n += 1);
+                        Self::handle_project_updated(project_id).await;
+                    }
+                    AppEvent::ProjectStatusChanged(ProjectStatusChanged { project_id, .. }) => {
+                        trigger_projects.update(|n| *n += 1);
+                        Self::handle_project_status_changed(project_id).await;
+                    }
+                    AppEvent::ProjectPublished(ProjectPublished { project_id, .. }) => {
+                        trigger_projects.update(|n| *n += 1);
+                        Self::handle_project_published(project_id).await;
+                    }
+
+                    AppEvent::ContentChanged => {
+                        trigger_content.update(|n| *n += 1);
+                        Self::handle_content_changed().await;
+                    }
+                }
+            }
+        });
+    }
+
+    async fn handle_skill_added(skill_id: String) {
+        log!("Handling skill added: {}", skill_id);
+    }
+
+    async fn handle_skill_updated(skill_id: String) {
+        log!("Handling skill updated: {}", skill_id);
+    }
+
+    async fn handle_skill_deleted(skill_id: String) {
+        log!("Handling skill deleted: {}", skill_id);
+    }
+
+    async fn handle_project_updated(project_id: String) {
+        log!("Handling project updated: {}", project_id);
+    }
+
+    async fn handle_project_status_changed(project_id: String) {
+        log!("Handling project status changed: {}", project_id);
+    }
+
+    async fn handle_project_published(project_id: String) {
+        log!("Handling project published: {}", project_id);
+    }
+
+    async fn handle_content_changed() {
+        log!("Handling content changed");
+    }
+}
+
+
+==========================================
+ФАЙЛ: ./mod.rs
+РАЗМЕР: 3605 байт
+==========================================
+// src/frontend.rs
+use leptos::*;
+use leptos_router::*;
+
+// Импортируем необходимые трейты
+use leptos::prelude::ElementChild;
+
+#[component]
+pub fn App() -> impl IntoView {
+    view! {
+        <Router>
+            <main class="min-h-screen bg-gray-50">
+                <Header/>
+                <Routes>
+                    <Route path="/" view=HomePage/>
+                    <Route path="/skills" view=SkillsPage/>
+                    <Route path="/projects" view=ProjectsPage/>
+                    <Route path="/about" view=AboutPage/>
+                </Routes>
+                <Footer/>
+            </main>
+        </Router>
+    }
+}
+
+#[component]
+fn Header() -> impl IntoView {
+    view! {
+        <header class="bg-white shadow-sm">
+            <nav class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <A href="/" class="text-xl font-bold text-blue-600">"VStor Tech"</A>
+                    <div class="flex space-x-6">
+                        <A href="/" class="text-gray-600 hover:text-blue-600">"Home"</A>
+                        <A href="/projects" class="text-gray-600 hover:text-blue-600">"Projects"</A>
+                        <A href="/skills" class="text-gray-600 hover:text-blue-600">"Skills"</A>
+                        <A href="/about" class="text-gray-600 hover:text-blue-600">"About"</A>
+                    </div>
+                </div>
+            </nav>
+        </header>
+    }
+}
+
+#[component]
+fn Footer() -> impl IntoView {
+    view! {
+        <footer class="bg-gray-800 text-white py-8">
+            <div class="container mx-auto px-4 text-center">
+                <p>"© 2024 VStor Tech Portfolio. Built with Rust & Leptos."</p>
+            </div>
+        </footer>
+    }
+}
+
+#[component]
+fn HomePage() -> impl IntoView {
+    view! {
+        <div class="container mx-auto px-4 py-12">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">"VStor Tech Portfolio"</h1>
+                <p class="text-xl text-gray-600 mb-8">"Full-stack developer specializing in Rust, Web, and System Programming"</p>
+                <div class="flex justify-center space-x-4">
+                    <A href="/projects" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">"View Projects"</A>
+                    <A href="/skills" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700">"View Skills"</A>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn ProjectsPage() -> impl IntoView {
+    view! {
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">"My Projects"</h1>
+            <p class="text-gray-600">"Projects will be loaded from backend API..."</p>
+        </div>
+    }
+}
+
+#[component]
+fn SkillsPage() -> impl IntoView {
+    view! {
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">"My Skills"</h1>
+            <p class="text-gray-600">"Skills will be loaded from backend API..."</p>
+        </div>
+    }
+}
+
+#[component]
+fn AboutPage() -> impl IntoView {
+    view! {
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">"About Me"</h1>
+            <p class="text-gray-600">"Information about me will be displayed here..."</p>
+        </div>
+    }
+}
+
+pub async fn start_frontend() {
+    console_error_panic_hook::set_once();
+
+    mount_to_body(|| {
+        view! {
+            <App/>
+        }
+    });
+}
+
+
+==========================================
+ФАЙЛ: ./api/mod.rs
+РАЗМЕР: 520 байт
+==========================================
+pub mod projects;
+pub mod skills;
+
+use crate::frontend::errors::FrontendError;
+
+const API_BASE: &str = "http://localhost:3000/api";
+
+pub async fn fetch_api<T>(endpoint: &str) -> Result<T, FrontendError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let url = format!("{}{}", API_BASE, endpoint);
+    let response = reqwest::get(&url)
+        .await
+        .map_err(|e| FrontendError::Network(e.to_string()))?;
+
+    response
+        .json()
+        .await
+        .map_err(|e| FrontendError::Network(e.to_string()))
+}
+
+
+==========================================
+ФАЙЛ: ./api/projects.rs
+РАЗМЕР: 546 байт
+==========================================
+use super::fetch_api;
+use crate::backend::models::responses::projects::ProjectResponse;
+
+pub async fn get_projects() -> Result<Vec<ProjectResponse>, crate::frontend::errors::FrontendError>
+{
+    fetch_api("/projects").await
+}
+
+pub async fn get_featured_projects()
+-> Result<Vec<ProjectResponse>, crate::frontend::errors::FrontendError> {
+    fetch_api("/projects/featured").await
+}
+
+pub async fn get_project(
+    id: &str,
+) -> Result<ProjectResponse, crate::frontend::errors::FrontendError> {
+    fetch_api(&format!("/projects/{}", id)).await
+}
+
+
+==========================================
+ФАЙЛ: ./events/mod.rs
+РАЗМЕР: 1235 байт
+==========================================
+// src/frontend/events/mod.rs
+use crate::shared::events::{AppEvent, EventBus};
+use leptos::*;
+use tokio::sync::broadcast;
+
+pub struct FrontendEventHandler {
+    _event_bus: EventBus,
+}
+
+impl FrontendEventHandler {
+    pub fn new(
+        event_bus: EventBus,
+        skills_trigger: WriteSignal<u32>,
+        projects_trigger: WriteSignal<u32>,
+    ) -> Self {
+        let mut receiver = event_bus.subscribe();
+
+        // Запускаем асинхронный слушатель событий
+        spawn_local(async move {
+            while let Ok(event) = receiver.recv().await {
+                match event {
+                    AppEvent::SkillCreated(_)
+                    | AppEvent::SkillUpdated(_)
+                    | AppEvent::SkillDeleted(_) => {
+                        skills_trigger.update(|n| *n += 1);
+                    }
+                    AppEvent::ProjectUpdated(_)
+                    | AppEvent::ProjectStatusChanged(_)
+                    | AppEvent::ProjectPublished(_) => {
+                        projects_trigger.update(|n| *n += 1);
+                    }
+                    _ => {}
+                }
+            }
+        });
+
+        Self {
+            _event_bus: event_bus,
+        }
+    }
+}
+
+
+==========================================
+ФАЙЛ: ./components/projects/projects_list.rs
+РАЗМЕР: 1046 байт
+==========================================
+use crate::frontend::api::projects::get_projects;
+use leptos::*;
+
+#[component]
+pub fn ProjectList() -> impl IntoView {
+    let projects_resource = create_local_resource(|| (), |_| async move { get_projects().await });
+
+    view! {
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Suspense fallback=move || view! { <div>"Loading..."</div> }>
+                {move || projects_resource.get().map(|projects| match projects {
+                    Ok(projects) => view! {
+                        <For
+                            each=move || projects.clone()
+                            key=|project| project.id.clone()
+                            children=move |project| view! {
+                                <ProjectCard project=project/>
+                            }
+                        />
+                    }.into_view(),
+                    Err(e) => view! { <div class="text-red-500">"Error: " {e.to_string()}</div> }.into_view(),
+                })}
+            </Suspense>
+        </div>
+    }
+}
+
+
+==========================================
+ФАЙЛ: ./app.rs
+РАЗМЕР: 766 байт
+==========================================
+use crate::frontend::events::FrontendEventHandler;
+use leptos::*;
+
+#[component]
+pub fn App() -> impl IntoView {
+    let (skills_trigger, set_skills_trigger) = create_signal(0);
+    let (projects_trigger, set_projects_trigger) = create_signal(0);
+
+    // Инициализация обработчика событий
+    let _event_handler =
+        FrontendEventHandler::new(event_bus.clone(), set_skills_trigger, set_projects_trigger);
+
+    view! {
+        <Layout>
+            <Router>
+                <Routes>
+                    <Route path="/" view=HomePage/>
+                    <Route path="/skills" view=SkillsPage/>
+                    <Route path="/projects" view=ProjectsPage/>
+                </Routes>
+            </Router>
+        </Layout>
+    }
+}
+
+
