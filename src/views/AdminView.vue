@@ -572,10 +572,12 @@ onMounted(async () => {
     await authStore.fetchIP();
     ipChecked.value = true;
     authStore.checkAuth();
-    contentStore.loadFromStorage();
-    servicesStore.loadFromStorage();
-    contactsStore.loadFromStorage();
-    skillsStore.loadFromStorage();
+    await Promise.all([
+        contentStore.loadFromApi(),
+        servicesStore.loadFromApi(),
+        contactsStore.loadFromApi(),
+        skillsStore.loadFromApi(),
+    ]);
     homeContent.value = { ...contentStore.homeContent };
     githubUsername.value = contentStore.githubUsername;
 });
@@ -594,11 +596,11 @@ const handleLogout = () => {
     loginPassword.value = "";
 };
 
-const saveContent = () => {
+const saveContent = async () => {
     contentStore.updateHomeContent(homeContent.value.en, "en");
     contentStore.updateHomeContent(homeContent.value.ru, "ru");
     contentStore.updateGithubUsername(githubUsername.value);
-    contentStore.saveToStorage();
+    await contentStore.saveToApi();
     showNotification();
 };
 

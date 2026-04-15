@@ -98,10 +98,12 @@ const getCategoryLabel = (categoryValue) => {
     return category ? category.label : categoryValue;
 };
 
-onMounted(() => {
-    contentStore.loadFromStorage();
-    contactsStore.loadFromStorage();
-    skillsStore.loadFromStorage();
+onMounted(async () => {
+    await Promise.all([
+        contentStore.loadFromApi(),
+        contactsStore.loadFromApi(),
+        skillsStore.loadFromApi(),
+    ]);
 });
 </script>
 

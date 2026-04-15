@@ -59,8 +59,8 @@ const getContactLink = (contact) => {
     return "#";
 };
 
-onMounted(() => {
-    contactsStore.loadFromStorage();
+onMounted(async () => {
+    await contactsStore.loadFromApi();
 });
 </script>
 

@@ -11,7 +11,7 @@ import {
   MessageCircle,
 } from "lucide-vue-next";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "/api" : "http://localhost:3001");
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 export const useContactsStore = defineStore("contacts", () => {
   const availableIcons = {
@@ -94,7 +94,7 @@ export const useContactsStore = defineStore("contacts", () => {
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/content`);
+      const response = await fetch(`${API_BASE_URL}/content`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -117,7 +117,7 @@ export const useContactsStore = defineStore("contacts", () => {
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/content`, {
+      const response = await fetch(`${API_BASE_URL}/content`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

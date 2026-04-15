@@ -3,7 +3,7 @@ import { ref, computed } from "vue";
 import { i18n } from "../i18n";
 import { appConfig } from "../config/env";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "/api" : "http://localhost:3001");
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 export const useContentStore = defineStore("content", () => {
   const homeContent = ref({
@@ -76,7 +76,7 @@ Full-stack разработчик, специализирующийся на с�
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/content`);
+      const response = await fetch(`${API_BASE_URL}/content`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -108,7 +108,7 @@ Full-stack разработчик, специализирующийся на с�
     isLoading.value = true;
     error.value = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/content`, {
+      const response = await fetch(`${API_BASE_URL}/content`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

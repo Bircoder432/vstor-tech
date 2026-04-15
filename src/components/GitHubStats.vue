@@ -48,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { Github } from "lucide-vue-next";
 
 const props = defineProps({
@@ -63,24 +63,34 @@ const loading = ref(true);
 const error = ref(null);
 
 const fetchStats = async () => {
+    if (!props.username) {
+        loading.value = false;
+        return;
+    }
     try {
         const response = await fetch(
             `https://api.github.com/users/${props.username}`,
         );
         if (!response.ok) throw new Error("Failed to fetch");
         stats.value = await response.json();
+        error.value = null;
     } catch (err) {
         error.value = err.message;
+        stats.value = null;
     } finally {
         loading.value = false;
     }
 };
 
+// Перезагружаем статистику при изменении username
+watch(() => props.username, () => {
+    loading.value = true;
+    fetchStats();
+}, { immediate: true });
+
 const formatDate = (dateString) => {
     return new Date(dateString).getFullYear();
 };
-
-onMounted(fetchStats);
 </script>
 
 <style scoped>
