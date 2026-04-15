@@ -5,7 +5,7 @@ import { i18n } from "../i18n";
 import { appConfig } from "../config/env";
 import { useAuthStore } from "./auth";
 
-const API_URL = appConfig.apiUrl;
+const API_URL = "http://80.64.17.81:3001/api";
 
 export const useContentStore = defineStore("content", () => {
   const homeContent = ref({

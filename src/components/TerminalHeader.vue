@@ -5,7 +5,7 @@
             <span class="control minimize"></span>
             <span class="control maximize"></span>
         </div>
-        <div class="title">{{ appName }}@{{ appVersion }} — terminal</div>
+        <div class="title">VSTOR_TECH@1.2.3 — terminal</div>
         <div class="spacer"></div>
 
         <!-- Admin link - visible only for allowed IPs -->

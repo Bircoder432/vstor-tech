@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { appConfig } from "../config/env";
 
-const API_URL = appConfig.apiUrl;
+const API_URL = "http://80.64.17.81:3001/api";
 
 export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = ref(false);

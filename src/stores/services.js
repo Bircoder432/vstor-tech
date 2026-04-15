@@ -15,7 +15,7 @@ import {
 import { useAuthStore } from "./auth";
 import { appConfig } from "../config/env";
 
-const API_URL = appConfig.apiUrl;
+const API_URL = "http://80.64.17.81:3001/api";
 
 export const useServicesStore = defineStore("services", () => {
   // Компоненты иконок для шаблонов
