@@ -1,7 +1,7 @@
 // src/config/env.js — ПОЛНЫЙ ХАРДКОД
 
 export const appConfig = {
-  apiUrl: "http://80.64.17.81:3001/api",
+  apiUrl: "https://api.vstor-tech.ru/portfolio/api",
   githubUsername: "bircoder432",
   appName: "vstor-tech",
   appVersion: "1.2.3",
