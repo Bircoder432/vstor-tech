@@ -12,6 +12,8 @@ import {
   ExternalLink,
 } from "lucide-vue-next";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "/api" : "http://localhost:3001");
+
 export const useServicesStore = defineStore("services", () => {
   const availableIcons = {
     Code,
@@ -33,7 +35,7 @@ export const useServicesStore = defineStore("services", () => {
         en: "Full-stack web applications using modern frameworks and best practices. From concept to deployment.",
         ru: "Full-stack веб-приложения с использованием современных фреймворков. От концепции до развёртывания.",
       },
-      icon: "Code",
+      icon: { type: "vue-component", name: "Code" },
       status: "active",
       link: "https://github.com",
     },
@@ -44,7 +46,7 @@ export const useServicesStore = defineStore("services", () => {
         en: "Custom command-line tools and automation scripts to streamline your development workflow.",
         ru: "Инструменты командной строки и скрипты автоматизации для оптимизации рабочего процесса.",
       },
-      icon: "Terminal",
+      icon: { type: "vue-component", name: "Terminal" },
       status: "active",
       link: "",
     },
@@ -55,28 +57,31 @@ export const useServicesStore = defineStore("services", () => {
         en: "Scalable database architecture and optimization for high-performance applications.",
         ru: "Масштабируемая архитектура баз данных и оптимизация для высоконагруженных приложений.",
       },
-      icon: "Database",
+      icon: { type: "vue-component", name: "Database" },
       status: "active",
       link: "",
     },
   ]);
 
+  const isLoading = ref(false);
+  const error = ref(null);
+
   const addService = (service) => {
     const id = Math.max(...services.value.map((s) => s.id), 0) + 1;
     services.value.push({ ...service, id });
-    saveToStorage();
+    saveToApi();
   };
 
   const removeService = (id) => {
     services.value = services.value.filter((s) => s.id !== id);
-    saveToStorage();
+    saveToApi();
   };
 
   const updateService = (id, updates) => {
     const index = services.value.findIndex((s) => s.id === id);
     if (index !== -1) {
       services.value[index] = { ...services.value[index], ...updates };
-      saveToStorage();
+      saveToApi();
     }
   };
 
@@ -88,33 +93,71 @@ export const useServicesStore = defineStore("services", () => {
     return service.description || "";
   };
 
-  const saveToStorage = () => {
-    localStorage.setItem("portfolio_services", JSON.stringify(services.value));
+  // Загрузка данных из API
+  const loadFromApi = async () => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/content`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      if (data.services && Array.isArray(data.services)) {
+        services.value = data.services.map((s) => ({
+          ...s,
+          description:
+            typeof s.description === "string"
+              ? { en: s.description, ru: s.description }
+              : s.description,
+        }));
+      }
+    } catch (e) {
+      console.error("Failed to load services from API:", e);
+      error.value = e.message;
+      // Fallback to default values already set
+    } finally {
+      isLoading.value = false;
+    }
   };
 
-  const loadFromStorage = () => {
-    const saved = localStorage.getItem("portfolio_services");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Миграция старого формата (строка) в новый (объект)
-      services.value = parsed.map((s) => ({
-        ...s,
-        description:
-          typeof s.description === "string"
-            ? { en: s.description, ru: s.description }
-            : s.description,
-      }));
+  // Сохранение данных в API
+  const saveToApi = async () => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Password": localStorage.getItem("adminPassword") || "admin123",
+        },
+        body: JSON.stringify({ services: services.value }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return true;
+    } catch (e) {
+      console.error("Failed to save services to API:", e);
+      error.value = e.message;
+      throw e;
+    } finally {
+      isLoading.value = false;
     }
   };
 
   return {
     services,
     availableIcons,
+    isLoading,
+    error,
     addService,
     removeService,
     updateService,
     getDescription,
-    loadFromStorage,
-    saveToStorage,
+    loadFromApi,
+    saveToApi,
   };
 });

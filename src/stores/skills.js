@@ -10,6 +10,8 @@ import {
   Monitor,
 } from "lucide-vue-next";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "/api" : "http://localhost:3001");
+
 export const useSkillsStore = defineStore("skills", () => {
   const skillCategories = [
     { value: "language", label: "Programming Language" },
@@ -26,7 +28,7 @@ export const useSkillsStore = defineStore("skills", () => {
       id: 1,
       name: "JavaScript",
       category: "language",
-      icon: { type: "vue-component", name: "FileCode", component: FileCode },
+      icon: { type: "vue-component", name: "FileCode" },
       level: "advanced",
       description: {
         en: "ES6+, async/await, closures, event loop",
@@ -37,7 +39,7 @@ export const useSkillsStore = defineStore("skills", () => {
       id: 2,
       name: "TypeScript",
       category: "language",
-      icon: { type: "vue-component", name: "FileType", component: FileType },
+      icon: { type: "vue-component", name: "FileType" },
       level: "advanced",
       description: {
         en: "Type systems, generics, decorators",
@@ -48,7 +50,7 @@ export const useSkillsStore = defineStore("skills", () => {
       id: 3,
       name: "Python",
       category: "language",
-      icon: { type: "vue-component", name: "Terminal", component: Terminal },
+      icon: { type: "vue-component", name: "Terminal" },
       level: "intermediate",
       description: {
         en: "Django, FastAPI, data processing",
@@ -59,7 +61,7 @@ export const useSkillsStore = defineStore("skills", () => {
       id: 4,
       name: "Git",
       category: "tools",
-      icon: { type: "vue-component", name: "GitBranch", component: GitBranch },
+      icon: { type: "vue-component", name: "GitBranch" },
       level: "advanced",
       description: {
         en: "Branching, rebasing, CI/CD integration",
@@ -70,7 +72,7 @@ export const useSkillsStore = defineStore("skills", () => {
       id: 5,
       name: "Docker",
       category: "devops",
-      icon: { type: "vue-component", name: "Container", component: Container },
+      icon: { type: "vue-component", name: "Container" },
       level: "intermediate",
       description: {
         en: "Containerization, compose, multi-stage builds",
@@ -81,7 +83,7 @@ export const useSkillsStore = defineStore("skills", () => {
       id: 6,
       name: "Linux",
       category: "system",
-      icon: { type: "vue-component", name: "Monitor", component: Monitor },
+      icon: { type: "vue-component", name: "Monitor" },
       level: "advanced",
       description: {
         en: "Bash, systemd, networking, security",
@@ -108,7 +110,7 @@ export const useSkillsStore = defineStore("skills", () => {
       id: 8,
       name: "PostgreSQL",
       category: "database",
-      icon: { type: "vue-component", name: "Database", component: Database },
+      icon: { type: "vue-component", name: "Database" },
       level: "intermediate",
       description: {
         en: "Query optimization, indexing, transactions",
@@ -117,22 +119,25 @@ export const useSkillsStore = defineStore("skills", () => {
     },
   ]);
 
+  const isLoading = ref(false);
+  const error = ref(null);
+
   const addSkill = (skill) => {
     const id = Math.max(...skills.value.map((s) => s.id), 0) + 1;
     skills.value.push({ ...skill, id });
-    saveToStorage();
+    saveToApi();
   };
 
   const removeSkill = (id) => {
     skills.value = skills.value.filter((s) => s.id !== id);
-    saveToStorage();
+    saveToApi();
   };
 
   const updateSkill = (id, updates) => {
     const index = skills.value.findIndex((s) => s.id === id);
     if (index !== -1) {
       skills.value[index] = { ...skills.value[index], ...updates };
-      saveToStorage();
+      saveToApi();
     }
   };
 
@@ -153,57 +158,66 @@ export const useSkillsStore = defineStore("skills", () => {
     return colors[level] || "#888888";
   };
 
-  const saveToStorage = () => {
-    // Не сохраняем компоненты Vue в localStorage
-    const storable = skills.value.map((s) => ({
-      ...s,
-      icon:
-        typeof s.icon === "object" && s.icon.component
-          ? { ...s.icon, component: undefined }
-          : s.icon,
-    }));
-    localStorage.setItem("portfolio_skills", JSON.stringify(storable));
+  // Загрузка данных из API
+  const loadFromApi = async () => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/content`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      if (data.skills && Array.isArray(data.skills)) {
+        skills.value = data.skills;
+      }
+    } catch (e) {
+      console.error("Failed to load skills from API:", e);
+      error.value = e.message;
+      // Fallback to default values already set
+    } finally {
+      isLoading.value = false;
+    }
   };
 
-  const loadFromStorage = () => {
-    const saved = localStorage.getItem("portfolio_skills");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Восстанавливаем компоненты для Lucide иконок
-        skills.value = parsed.map((s) => {
-          if (s.icon && s.icon.type === "vue-component" && s.icon.name) {
-            // Импортируем динамически или используем сопоставление
-            const iconMap = {
-              FileCode,
-              FileType,
-              Terminal,
-              Database,
-              GitBranch,
-              Container,
-              Monitor,
-            };
-            if (iconMap[s.icon.name]) {
-              s.icon.component = iconMap[s.icon.name];
-            }
-          }
-          return s;
-        });
-      } catch (e) {
-        console.error("Failed to load skills:", e);
+  // Сохранение данных в API
+  const saveToApi = async () => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Password": localStorage.getItem("adminPassword") || "admin123",
+        },
+        body: JSON.stringify({ skills: skills.value }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      return true;
+    } catch (e) {
+      console.error("Failed to save skills to API:", e);
+      error.value = e.message;
+      throw e;
+    } finally {
+      isLoading.value = false;
     }
   };
 
   return {
     skills,
     skillCategories,
+    isLoading,
+    error,
     addSkill,
     removeSkill,
     updateSkill,
     getDescription,
     getLevelColor,
-    loadFromStorage,
-    saveToStorage,
+    loadFromApi,
+    saveToApi,
   };
 });
