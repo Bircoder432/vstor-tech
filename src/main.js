@@ -1,3 +1,4 @@
+// src/main.js — обновлённая инициализация
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
@@ -24,7 +25,12 @@ app.use(createPinia());
 app.use(router);
 app.use(i18n);
 
-// Загрузка пользовательских иконок
+// Инициализация auth при старте
+import { useAuthStore } from "./stores/auth";
+const authStore = useAuthStore();
+authStore.init();
+
+// Загрузка иконок
 import { useIconSourcesStore } from "./stores/iconSources";
 const iconSources = useIconSourcesStore();
 iconSources.loadFromStorage();

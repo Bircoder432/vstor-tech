@@ -33,6 +33,7 @@
                 <span class="section-line"></span>
             </div>
 
+            <!-- src/views/HomeView.vue — исправленный фрагмент контактов -->
             <div class="contacts-grid">
                 <a
                     v-for="contact in contactsStore.contacts"
@@ -44,7 +45,10 @@
                 >
                     <div class="contact-icon">
                         <component
-                            :is="contactsStore.availableIcons[contact.icon]"
+                            :is="
+                                contactsStore.availableIcons[contact.icon] ||
+                                contactsStore.availableIcons.Globe
+                            "
                             :size="20"
                         />
                     </div>
@@ -98,10 +102,12 @@ const getCategoryLabel = (categoryValue) => {
     return category ? category.label : categoryValue;
 };
 
-onMounted(() => {
-    contentStore.loadFromStorage();
-    contactsStore.loadFromStorage();
-    skillsStore.loadFromStorage();
+onMounted(async () => {
+    await Promise.all([
+        contentStore.loadFromApi(),
+        contactsStore.loadFromApi(),
+        skillsStore.loadFromApi(),
+    ]);
 });
 </script>
 

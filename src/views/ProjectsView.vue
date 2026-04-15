@@ -120,8 +120,8 @@ const filteredRepos = computed(() => {
     return result;
 });
 
-onMounted(() => {
-    contentStore.loadFromStorage();
+onMounted(async () => {
+    await contentStore.loadFromApi();
     fetchRepos();
 });
 </script>

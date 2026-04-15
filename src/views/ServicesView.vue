@@ -44,8 +44,8 @@ import { useServicesStore } from "../stores/services";
 
 const servicesStore = useServicesStore();
 
-onMounted(() => {
-    servicesStore.loadFromStorage();
+onMounted(async () => {
+    await servicesStore.loadFromApi();
 });
 </script>
 

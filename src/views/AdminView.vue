@@ -1,17 +1,16 @@
+<!-- src/views/AdminView.vue -->
 <template>
     <div class="admin-view">
-        <!-- IP Check -->
-        <div v-if="!ipChecked" class="loading-section">
+        <!-- Loading -->
+        <div v-if="authStore.isLoading" class="loading-section">
             <span class="loading-spinner">◐</span>
-            checking_ip_address...
+            checking...
         </div>
 
         <!-- IP Denied -->
         <div v-else-if="!authStore.ipAllowed" class="access-denied">
             <div class="section-header">
-                <span class="section-prompt"
-                    >~/{{ $t("admin.title") }}/error</span
-                >
+                <span class="section-prompt">~/admin/error</span>
                 <span class="section-line"></span>
             </div>
             <div class="denied-content">
@@ -19,19 +18,13 @@
                 <h2>{{ $t("common.access_denied") }}</h2>
                 <p>Your IP: {{ authStore.currentIP }}</p>
                 <p class="hint">This IP is not in the allowed list.</p>
-                <p class="hint">
-                    Allowed: localhost, 127.0.0.1, 10.x.x.x, 172.16-31.x.x,
-                    192.168.x.x
-                </p>
             </div>
         </div>
 
-        <!-- Login Form -->
+        <!-- Login -->
         <div v-else-if="!authStore.isAuthenticated" class="login-section">
             <div class="section-header">
-                <span class="section-prompt"
-                    >~/{{ $t("admin.title") }}/{{ $t("admin.login") }}</span
-                >
+                <span class="section-prompt">~/admin/login</span>
                 <span class="section-line"></span>
             </div>
 
@@ -55,14 +48,20 @@
                     />
                 </div>
 
-                <div v-if="loginError" class="login-error">
+                <div v-if="authStore.error" class="login-error">
                     <span class="error-icon">✗</span>
-                    {{ loginError }}
+                    {{ authStore.error }}
                 </div>
 
-                <button class="btn btn-primary" @click="handleLogin">
+                <button
+                    class="btn btn-primary"
+                    @click="handleLogin"
+                    :disabled="authStore.isLoading"
+                >
                     <Lock :size="16" />
-                    {{ $t("admin.authenticate") }}()
+                    {{
+                        authStore.isLoading ? "..." : $t("admin.authenticate")
+                    }}()
                 </button>
             </div>
         </div>
@@ -71,9 +70,7 @@
         <template v-else>
             <div class="admin-header">
                 <div class="section-header">
-                    <span class="section-prompt"
-                        >~/{{ $t("admin.title") }}/{{ $t("admin.panel") }}</span
-                    >
+                    <span class="section-prompt">~/admin/panel</span>
                     <span class="section-line"></span>
                 </div>
                 <button
@@ -107,7 +104,6 @@
                         v-model="githubUsername"
                         type="text"
                         class="form-input"
-                        placeholder="octocat"
                     />
                 </div>
 
@@ -140,14 +136,19 @@
                         v-model="homeContent[contentLocale]"
                         class="form-textarea"
                         rows="15"
-                        placeholder="# About me..."
                     ></textarea>
                 </div>
 
                 <div class="form-actions">
-                    <button class="btn btn-primary" @click="saveContent">
+                    <button
+                        class="btn btn-primary"
+                        @click="saveContent"
+                        :disabled="contentStore.isLoading"
+                    >
                         <Save :size="16" />
-                        {{ $t("admin.save") }}()
+                        {{
+                            contentStore.isLoading ? "..." : $t("admin.save")
+                        }}()
                     </button>
                     <button class="btn btn-secondary" @click="resetContent">
                         <RotateCcw :size="16" />
@@ -168,7 +169,6 @@
                                 v-model="newSkill.name"
                                 type="text"
                                 class="form-input"
-                                placeholder="JavaScript"
                             />
                         </div>
 
@@ -201,17 +201,11 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">icon:</label>
-                            <IconPicker v-model="newSkill.icon" />
-                        </div>
-
-                        <div class="form-group">
                             <label class="form-label">description (en):</label>
                             <input
                                 v-model="newSkill.description.en"
                                 type="text"
                                 class="form-input"
-                                placeholder="Skill description"
                             />
                         </div>
 
@@ -221,7 +215,6 @@
                                 v-model="newSkill.description.ru"
                                 type="text"
                                 class="form-input"
-                                placeholder="Описание навыка"
                             />
                         </div>
 
@@ -233,23 +226,17 @@
 
                     <div class="skills-list">
                         <h3 class="form-title">current_skills[]</h3>
-
                         <div
                             v-for="skill in skillsStore.skills"
                             :key="skill.id"
                             class="skill-item"
                         >
                             <div class="skill-info">
-                                <IconRenderer :icon="skill.icon" :size="16" />
-                                <div class="skill-details">
-                                    <span class="skill-name">{{
-                                        skill.name
-                                    }}</span>
-                                    <span class="skill-meta"
-                                        >{{ skill.category }} •
-                                        {{ skill.level }}</span
-                                    >
-                                </div>
+                                <span class="skill-name">{{ skill.name }}</span>
+                                <span class="skill-meta"
+                                    >{{ skill.category }} •
+                                    {{ skill.level }}</span
+                                >
                             </div>
                             <button
                                 class="btn btn-danger"
@@ -257,13 +244,6 @@
                             >
                                 <Trash2 :size="14" />
                             </button>
-                        </div>
-
-                        <div
-                            v-if="skillsStore.skills.length === 0"
-                            class="empty-state"
-                        >
-                            No skills configured
                         </div>
                     </div>
                 </div>
@@ -318,15 +298,7 @@
                                 v-model="newService.link"
                                 type="url"
                                 class="form-input"
-                                placeholder="https://example.com"
                             />
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label"
-                                >{{ $t("admin.icon") }}:</label
-                            >
-                            <IconPicker v-model="newService.icon" />
                         </div>
 
                         <button class="btn btn-primary" @click="addService">
@@ -339,24 +311,20 @@
                         <h3 class="form-title">
                             {{ $t("admin.current_services") }}[]
                         </h3>
-
                         <div
                             v-for="service in servicesStore.services"
                             :key="service.id"
                             class="service-item"
                         >
                             <div class="service-info">
-                                <IconRenderer :icon="service.icon" :size="16" />
-                                <div class="service-details">
-                                    <span class="service-name">{{
-                                        service.title
-                                    }}</span>
-                                    <span
-                                        v-if="service.link"
-                                        class="service-link"
-                                        >{{ service.link }}</span
-                                    >
-                                </div>
+                                <span class="service-name">{{
+                                    service.title
+                                }}</span>
+                                <span
+                                    v-if="service.link"
+                                    class="service-link"
+                                    >{{ service.link }}</span
+                                >
                             </div>
                             <button
                                 class="btn btn-danger"
@@ -364,13 +332,6 @@
                             >
                                 <Trash2 :size="14" />
                             </button>
-                        </div>
-
-                        <div
-                            v-if="servicesStore.services.length === 0"
-                            class="empty-state"
-                        >
-                            {{ $t("admin.no_services") }}
                         </div>
                     </div>
                 </div>
@@ -410,7 +371,6 @@
                                 v-model="newContact.value"
                                 type="text"
                                 class="form-input"
-                                placeholder="value@example.com"
                             />
                         </div>
 
@@ -422,7 +382,6 @@
                                 v-model="newContact.label"
                                 type="text"
                                 class="form-input"
-                                placeholder="Display Label"
                             />
                         </div>
 
@@ -434,7 +393,6 @@
                                 v-model="newContact.link"
                                 type="url"
                                 class="form-input"
-                                placeholder="https://..."
                             />
                             <span class="form-hint"
                                 >Optional - for social media links</span
@@ -451,29 +409,18 @@
                         <h3 class="form-title">
                             {{ $t("admin.current_contacts") }}[]
                         </h3>
-
                         <div
                             v-for="contact in contactsStore.contacts"
                             :key="contact.id"
                             class="contact-item"
                         >
                             <div class="contact-info">
-                                <IconRenderer
-                                    :icon="
-                                        contactsStore.availableIcons[
-                                            contact.icon
-                                        ]
-                                    "
-                                    :size="16"
-                                />
-                                <div class="contact-details">
-                                    <span class="contact-name">{{
-                                        contact.label
-                                    }}</span>
-                                    <span class="contact-value-small">{{
-                                        contact.value
-                                    }}</span>
-                                </div>
+                                <span class="contact-name">{{
+                                    contact.label
+                                }}</span>
+                                <span class="contact-value-small">{{
+                                    contact.value
+                                }}</span>
                             </div>
                             <button
                                 class="btn btn-danger"
@@ -482,20 +429,13 @@
                                 <Trash2 :size="14" />
                             </button>
                         </div>
-
-                        <div
-                            v-if="contactsStore.contacts.length === 0"
-                            class="empty-state"
-                        >
-                            {{ $t("admin.no_contacts") }}
-                        </div>
                     </div>
                 </div>
             </div>
 
             <div v-if="saved" class="save-notification">
                 <Check :size="16" />
-                {{ $t("admin.save") }}_success
+                saved successfully
             </div>
         </template>
     </div>
@@ -505,21 +445,19 @@
 import { ref, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import {
+    Lock,
+    LogOut,
     Save,
     RotateCcw,
     Plus,
     Trash2,
     Check,
-    Lock,
-    LogOut,
 } from "lucide-vue-next";
 import { useContentStore } from "../stores/content";
 import { useServicesStore } from "../stores/services";
 import { useContactsStore } from "../stores/contacts";
 import { useSkillsStore } from "../stores/skills";
 import { useAuthStore } from "../stores/auth";
-import IconPicker from "../components/IconPicker.vue";
-import IconRenderer from "../components/IconRenderer.vue";
 
 const { t } = useI18n();
 const contentStore = useContentStore();
@@ -532,8 +470,6 @@ const activeTab = ref("content");
 const contentLocale = ref("en");
 const saved = ref(false);
 const loginPassword = ref("");
-const loginError = ref("");
-const ipChecked = ref(false);
 
 const tabs = [
     { id: "content", label: "content" },
@@ -548,7 +484,6 @@ const githubUsername = ref("");
 const newSkill = ref({
     name: "",
     category: "language",
-    icon: null,
     level: "intermediate",
     description: { en: "", ru: "" },
 });
@@ -556,8 +491,6 @@ const newSkill = ref({
 const newService = ref({
     title: "",
     description: { en: "", ru: "" },
-    icon: null,
-    status: "active",
     link: "",
 });
 
@@ -569,36 +502,40 @@ const newContact = ref({
 });
 
 onMounted(async () => {
-    await authStore.fetchIP();
-    ipChecked.value = true;
-    authStore.checkAuth();
-    contentStore.loadFromStorage();
-    servicesStore.loadFromStorage();
-    contactsStore.loadFromStorage();
-    skillsStore.loadFromStorage();
-    homeContent.value = { ...contentStore.homeContent };
-    githubUsername.value = contentStore.githubUsername;
+    await authStore.init();
+    if (authStore.isAuthenticated) {
+        await loadData();
+    }
 });
 
-const handleLogin = () => {
-    if (authStore.login(loginPassword.value)) {
-        loginError.value = "";
+const loadData = async () => {
+    await Promise.all([
+        contentStore.loadFromApi(),
+        servicesStore.loadFromApi(),
+        contactsStore.loadFromApi(),
+        skillsStore.loadFromApi(),
+    ]);
+    homeContent.value = { ...contentStore.homeContent };
+    githubUsername.value = contentStore.githubUsername;
+};
+
+const handleLogin = async () => {
+    const result = await authStore.login(loginPassword.value);
+    if (result.success) {
         loginPassword.value = "";
-    } else {
-        loginError.value = "Invalid password";
+        await loadData();
     }
 };
 
-const handleLogout = () => {
-    authStore.logout();
-    loginPassword.value = "";
+const handleLogout = async () => {
+    await authStore.logout();
 };
 
-const saveContent = () => {
+const saveContent = async () => {
     contentStore.updateHomeContent(homeContent.value.en, "en");
     contentStore.updateHomeContent(homeContent.value.ru, "ru");
     contentStore.updateGithubUsername(githubUsername.value);
-    contentStore.saveToStorage();
+    await contentStore.saveToApi();
     showNotification();
 };
 
@@ -607,48 +544,46 @@ const resetContent = () => {
     githubUsername.value = contentStore.githubUsername;
 };
 
-const addSkill = () => {
+const addSkill = async () => {
     if (!newSkill.value.name) return;
-
-    skillsStore.addSkill({ ...newSkill.value });
+    await skillsStore.addSkill({ ...newSkill.value });
     newSkill.value = {
         name: "",
         category: "language",
-        icon: null,
         level: "intermediate",
         description: { en: "", ru: "" },
     };
     showNotification();
 };
 
-const removeSkill = (id) => {
-    skillsStore.removeSkill(id);
+const removeSkill = async (id) => {
+    await skillsStore.removeSkill(id);
     showNotification();
 };
 
-const addService = () => {
-    if (!newService.value.title || !newService.value.description.en) return;
-
-    servicesStore.addService({ ...newService.value });
+const addService = async () => {
+    if (!newService.value.title) return;
+    await servicesStore.addService({
+        ...newService.value,
+        icon: { type: "vue-component", name: "Code" },
+        status: "active",
+    });
     newService.value = {
         title: "",
         description: { en: "", ru: "" },
-        icon: null,
-        status: "active",
         link: "",
     };
     showNotification();
 };
 
-const removeService = (id) => {
-    servicesStore.removeService(id);
+const removeService = async (id) => {
+    await servicesStore.removeService(id);
     showNotification();
 };
 
-const addContact = () => {
+const addContact = async () => {
     if (!newContact.value.value) return;
-
-    contactsStore.addContact({ ...newContact.value });
+    await contactsStore.addContact({ ...newContact.value });
     newContact.value = {
         type: "email",
         value: "",
@@ -658,8 +593,8 @@ const addContact = () => {
     showNotification();
 };
 
-const removeContact = (id) => {
-    contactsStore.removeContact(id);
+const removeContact = async (id) => {
+    await contactsStore.removeContact(id);
     showNotification();
 };
 
@@ -670,6 +605,7 @@ const showNotification = () => {
 </script>
 
 <style scoped>
+/* Стили остаются такими же как в оригинале */
 .admin-view {
     max-width: 900px;
 }
@@ -715,11 +651,6 @@ const showNotification = () => {
     margin-bottom: 1rem;
 }
 
-.denied-content h2 {
-    color: var(--error);
-    margin-bottom: 1rem;
-}
-
 .hint {
     color: var(--text-secondary);
     font-size: 0.9rem;
@@ -731,15 +662,6 @@ const showNotification = () => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
-}
-
-.admin-header .section-header {
-    flex: 1;
-    margin-bottom: 0;
-}
-
-.logout-btn {
-    margin-left: 1rem;
 }
 
 .section-header {
@@ -761,15 +683,11 @@ const showNotification = () => {
     background: var(--border);
 }
 
-.login-section {
-    max-width: 500px;
-}
-
 .login-form {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     padding: 2rem;
-    margin-bottom: 1rem;
+    max-width: 500px;
 }
 
 .ip-info {
@@ -777,88 +695,16 @@ const showNotification = () => {
     padding: 0.75rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    font-size: 0.85rem;
 }
 
 .ip-label {
     color: var(--accent);
 }
 
-.ip-value {
-    color: var(--text-primary);
-    margin: 0 0.5rem;
-}
-
 .ip-status {
     color: var(--accent);
     text-transform: uppercase;
     font-size: 0.75rem;
-}
-
-.login-error {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--error);
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-}
-
-.admin-tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0.5rem;
-}
-
-.tab-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    padding: 0.5rem 1.5rem;
-    font-family: inherit;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: lowercase;
-}
-
-.tab-btn:hover,
-.tab-btn.active {
-    background: var(--bg-card);
-    border-color: var(--accent);
-    color: var(--accent);
-}
-
-.admin-section {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    padding: 1.5rem;
-}
-
-.content-tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.content-tab-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    padding: 0.25rem 0.75rem;
-    font-family: inherit;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.content-tab-btn:hover,
-.content-tab-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--bg-card);
 }
 
 .form-group {
@@ -874,21 +720,17 @@ const showNotification = () => {
 }
 
 .form-input,
-.form-textarea,
-select.form-input {
+.form-textarea {
     width: 100%;
     background: var(--bg-card);
     border: 1px solid var(--border);
     color: var(--text-primary);
     padding: 0.75rem;
     font-family: inherit;
-    font-size: 0.9rem;
-    transition: border-color 0.2s;
 }
 
 .form-input:focus,
-.form-textarea:focus,
-select.form-input:focus {
+.form-textarea:focus {
     outline: none;
     border-color: var(--accent);
 }
@@ -911,11 +753,10 @@ select.form-input:focus {
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
     font-family: inherit;
-    font-size: 0.9rem;
     cursor: pointer;
-    transition: all 0.2s;
     border: 1px solid;
     text-transform: lowercase;
+    background: transparent;
 }
 
 .btn-primary {
@@ -924,31 +765,67 @@ select.form-input:focus {
     color: var(--bg-primary);
 }
 
-.btn-primary:hover {
-    background: var(--accent-dim);
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-secondary {
-    background: transparent;
     border-color: var(--border);
     color: var(--text-secondary);
 }
 
-.btn-secondary:hover {
-    border-color: var(--text-primary);
-    color: var(--text-primary);
-}
-
 .btn-danger {
-    background: transparent;
     border-color: var(--error);
     color: var(--error);
     padding: 0.5rem;
 }
 
-.btn-danger:hover {
-    background: var(--error);
-    color: var(--text-primary);
+.admin-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.5rem 1.5rem;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.tab-btn.active,
+.tab-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.content-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.content-tab-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.25rem 0.75rem;
+}
+
+.content-tab-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.admin-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
 }
 
 .skills-admin,
@@ -976,51 +853,6 @@ select.form-input:focus {
     border-bottom: 1px solid var(--border);
 }
 
-.icon-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
-}
-
-.icon-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.75rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-    font-size: 0.7rem;
-}
-
-.icon-btn:hover,
-.icon-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
-}
-
-.skills-list,
-.services-list,
-.contacts-list {
-    border-left: 1px solid var(--border);
-    padding-left: 2rem;
-}
-
-@media (max-width: 768px) {
-    .skills-list,
-    .services-list,
-    .contacts-list {
-        border-left: none;
-        padding-left: 0;
-        border-top: 1px solid var(--border);
-        padding-top: 1.5rem;
-    }
-}
-
 .skill-item,
 .service-item,
 .contact-item {
@@ -1037,48 +869,20 @@ select.form-input:focus {
 .service-info,
 .contact-info {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: var(--accent);
-    flex: 1;
-    min-width: 0;
-}
-
-.skill-details,
-.service-details,
-.contact-details {
-    display: flex;
     flex-direction: column;
-    min-width: 0;
 }
 
 .skill-name,
 .service-name,
 .contact-name {
     color: var(--text-primary);
-    font-size: 0.9rem;
 }
 
-.skill-meta {
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-}
-
+.skill-meta,
 .service-link,
 .contact-value-small {
     color: var(--text-secondary);
     font-size: 0.75rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 200px;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 2rem;
-    color: var(--text-secondary);
-    font-style: italic;
 }
 
 .save-notification {

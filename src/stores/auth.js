@@ -1,110 +1,124 @@
+// src/stores/auth.js
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { appConfig } from "../config/env";
 
+const API_URL = appConfig.apiUrl;
+
 export const useAuthStore = defineStore("auth", () => {
-  // Используем значения из .env или fallback
-  const DEFAULT_PASSWORD = appConfig.adminPassword;
-  const ALLOWED_IPS = appConfig.allowedIps;
-
-  // Приватные диапазоны сетей
-  const PRIVATE_RANGES = [
-    /^10\./,
-    /^172\.(1[6-9]|2[0-9]|3[01])\./,
-    /^192\.168\./,
-  ];
-
   const isAuthenticated = ref(false);
-  const password = ref("");
+  const isLoading = ref(false);
   const currentIP = ref("");
   const ipAllowed = ref(false);
+  const authToken = ref(localStorage.getItem("portfolio_auth_token") || "");
+  const error = ref(null);
 
-  const isPrivateIP = (ip) => {
-    return PRIVATE_RANGES.some((range) => range.test(ip));
+  // Проверяем токен при инициализации
+  const init = async () => {
+    if (authToken.value) {
+      await checkStatus();
+    } else {
+      await checkIP();
+    }
   };
 
-  const fetchIP = async () => {
+  const checkIP = async () => {
     try {
-      // Проверяем hostname первым делом
-      const hostname = window.location.hostname;
-
-      if (
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        hostname === "::1"
-      ) {
-        currentIP.value = "127.0.0.1";
-        ipAllowed.value =
-          ALLOWED_IPS.includes("127.0.0.1") ||
-          ALLOWED_IPS.includes("localhost");
-        return;
-      }
-
-      // Проверяем приватные сети по hostname
-      if (isPrivateIP(hostname)) {
-        currentIP.value = hostname;
-        ipAllowed.value = true;
-        return;
-      }
-
-      // Пробуем получить внешний IP через API
-      const response = await fetch("https://api.ipify.org?format=json");
+      const response = await fetch(`${API_URL}/auth/status`);
       const data = await response.json();
-      currentIP.value = data.ip;
-
-      // Проверяем в белом списке или в приватном диапазоне
-      ipAllowed.value = ALLOWED_IPS.includes(data.ip) || isPrivateIP(data.ip);
-    } catch (err) {
-      // Если API недоступен, используем hostname
-      const hostname = window.location.hostname;
-      currentIP.value = hostname;
-
-      ipAllowed.value =
-        ALLOWED_IPS.includes(hostname) ||
-        hostname === "localhost" ||
-        hostname === "127.0.0.1" ||
-        isPrivateIP(hostname);
+      currentIP.value = data.currentIP;
+      ipAllowed.value = data.ipAllowed;
+      isAuthenticated.value = data.authenticated;
+    } catch (e) {
+      console.error("Failed to check IP:", e);
+      ipAllowed.value = false;
     }
   };
 
-  const checkAuth = () => {
-    const saved = localStorage.getItem("portfolio_auth");
-    if (saved) {
-      const data = JSON.parse(saved);
-      isAuthenticated.value =
-        data.isAuthenticated && data.timestamp > Date.now() - 86400000;
+  const checkStatus = async () => {
+    if (!authToken.value) return;
+
+    try {
+      const response = await fetch(`${API_URL}/auth/status`, {
+        headers: {
+          "X-Auth-Token": authToken.value,
+        },
+      });
+      const data = await response.json();
+      currentIP.value = data.currentIP;
+      ipAllowed.value = data.ipAllowed;
+      isAuthenticated.value = data.authenticated;
+
+      if (!data.authenticated) {
+        logout();
+      }
+    } catch (e) {
+      console.error("Failed to check status:", e);
+      isAuthenticated.value = false;
     }
   };
 
-  const login = (pass) => {
-    if (!ipAllowed.value) return false;
-    if (pass === DEFAULT_PASSWORD) {
-      isAuthenticated.value = true;
-      localStorage.setItem(
-        "portfolio_auth",
-        JSON.stringify({
-          isAuthenticated: true,
-          timestamp: Date.now(),
-        }),
-      );
-      return true;
+  const login = async (password) => {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.token) {
+        authToken.value = data.token;
+        localStorage.setItem("portfolio_auth_token", data.token);
+        isAuthenticated.value = true;
+        return { success: true };
+      } else {
+        error.value = data.error || "Login failed";
+        return { success: false, error: data.error };
+      }
+    } catch (e) {
+      error.value = "Network error";
+      return { success: false, error: e.message };
+    } finally {
+      isLoading.value = false;
     }
-    return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    if (authToken.value) {
+      try {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: "POST",
+          headers: {
+            "X-Auth-Token": authToken.value,
+          },
+        });
+      } catch (e) {
+        console.error("Logout error:", e);
+      }
+    }
+
+    authToken.value = "";
+    localStorage.removeItem("portfolio_auth_token");
     isAuthenticated.value = false;
-    localStorage.removeItem("portfolio_auth");
   };
 
   return {
     isAuthenticated: computed(() => isAuthenticated.value),
+    isLoading: computed(() => isLoading.value),
     currentIP: computed(() => currentIP.value),
     ipAllowed: computed(() => ipAllowed.value),
-    allowedIpsList: ALLOWED_IPS,
+    error: computed(() => error.value),
+    token: computed(() => authToken.value),
+    init,
     login,
     logout,
-    checkAuth,
-    fetchIP,
+    checkStatus,
   };
 });
