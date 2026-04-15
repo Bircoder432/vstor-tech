@@ -8,7 +8,7 @@ export default defineConfig({
   // Пробрасываем env в билд
   define: {
     __API_URL__: JSON.stringify(
-      process.env.VITE_API_URL || "http://localhost:3001/api",
+      process.env.VITE_API_URL || "https://api.vstor-tech.ru/portfolio/api",
     ),
   },
 
@@ -20,7 +20,8 @@ export default defineConfig({
     proxy: {
       // Для разработки — проксируем API
       "/api": {
-        target: process.env.VITE_API_URL || "http://localhost:3001",
+        target:
+          process.env.VITE_API_URL || "https://api.vstor-tech.ru/portfolio/api",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, "/api"),
       },
