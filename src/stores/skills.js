@@ -9,6 +9,7 @@ import {
   Container,
   Monitor,
 } from "lucide-vue-next";
+import { appConfig } from "../config/env";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -122,22 +123,62 @@ export const useSkillsStore = defineStore("skills", () => {
   const isLoading = ref(false);
   const error = ref(null);
 
+  // Вспомогательная функция для сохранения полного контента
+  const saveFullContent = async (partialData) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      // Сначала загружаем текущие данные
+      const getResponse = await fetch(`${API_BASE_URL}/content`);
+      if (!getResponse.ok) {
+        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      }
+      const currentData = await getResponse.json();
+      
+      // Объединяем с новыми данными
+      const updatedData = {
+        ...currentData,
+        ...partialData,
+      };
+      
+      // Отправляем полный объект
+      const response = await fetch(`${API_BASE_URL}/content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Password": appConfig.adminPassword,
+        },
+        body: JSON.stringify(updatedData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return true;
+    } catch (e) {
+      console.error("Failed to save skills to API:", e);
+      error.value = e.message;
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const addSkill = (skill) => {
     const id = Math.max(...skills.value.map((s) => s.id), 0) + 1;
     skills.value.push({ ...skill, id });
-    saveToApi();
+    saveFullContent({ skills: skills.value });
   };
 
   const removeSkill = (id) => {
     skills.value = skills.value.filter((s) => s.id !== id);
-    saveToApi();
+    saveFullContent({ skills: skills.value });
   };
 
   const updateSkill = (id, updates) => {
     const index = skills.value.findIndex((s) => s.id === id);
     if (index !== -1) {
       skills.value[index] = { ...skills.value[index], ...updates };
-      saveToApi();
+      saveFullContent({ skills: skills.value });
     }
   };
 
@@ -181,32 +222,6 @@ export const useSkillsStore = defineStore("skills", () => {
     }
   };
 
-  // Сохранение данных в API
-  const saveToApi = async () => {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/content`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Password": localStorage.getItem("adminPassword") || "admin123",
-        },
-        body: JSON.stringify({ skills: skills.value }),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return true;
-    } catch (e) {
-      console.error("Failed to save skills to API:", e);
-      error.value = e.message;
-      throw e;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
   return {
     skills,
     skillCategories,
@@ -218,6 +233,5 @@ export const useSkillsStore = defineStore("skills", () => {
     getDescription,
     getLevelColor,
     loadFromApi,
-    saveToApi,
   };
 });

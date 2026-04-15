@@ -11,6 +11,7 @@ import {
   Cloud,
   ExternalLink,
 } from "lucide-vue-next";
+import { appConfig } from "../config/env";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -66,22 +67,62 @@ export const useServicesStore = defineStore("services", () => {
   const isLoading = ref(false);
   const error = ref(null);
 
+  // Вспомогательная функция для сохранения полного контента
+  const saveFullContent = async (partialData) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      // Сначала загружаем текущие данные
+      const getResponse = await fetch(`${API_BASE_URL}/content`);
+      if (!getResponse.ok) {
+        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      }
+      const currentData = await getResponse.json();
+      
+      // Объединяем с новыми данными
+      const updatedData = {
+        ...currentData,
+        ...partialData,
+      };
+      
+      // Отправляем полный объект
+      const response = await fetch(`${API_BASE_URL}/content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Password": appConfig.adminPassword,
+        },
+        body: JSON.stringify(updatedData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return true;
+    } catch (e) {
+      console.error("Failed to save services to API:", e);
+      error.value = e.message;
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const addService = (service) => {
     const id = Math.max(...services.value.map((s) => s.id), 0) + 1;
     services.value.push({ ...service, id });
-    saveToApi();
+    saveFullContent({ services: services.value });
   };
 
   const removeService = (id) => {
     services.value = services.value.filter((s) => s.id !== id);
-    saveToApi();
+    saveFullContent({ services: services.value });
   };
 
   const updateService = (id, updates) => {
     const index = services.value.findIndex((s) => s.id === id);
     if (index !== -1) {
       services.value[index] = { ...services.value[index], ...updates };
-      saveToApi();
+      saveFullContent({ services: services.value });
     }
   };
 
@@ -122,32 +163,6 @@ export const useServicesStore = defineStore("services", () => {
     }
   };
 
-  // Сохранение данных в API
-  const saveToApi = async () => {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/content`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Password": localStorage.getItem("adminPassword") || "admin123",
-        },
-        body: JSON.stringify({ services: services.value }),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return true;
-    } catch (e) {
-      console.error("Failed to save services to API:", e);
-      error.value = e.message;
-      throw e;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
   return {
     services,
     availableIcons,
@@ -158,6 +173,5 @@ export const useServicesStore = defineStore("services", () => {
     updateService,
     getDescription,
     loadFromApi,
-    saveToApi,
   };
 });

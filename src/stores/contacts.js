@@ -10,6 +10,7 @@ import {
   Globe,
   MessageCircle,
 } from "lucide-vue-next";
+import { appConfig } from "../config/env";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -64,6 +65,46 @@ export const useContactsStore = defineStore("contacts", () => {
   const isLoading = ref(false);
   const error = ref(null);
 
+  // Вспомогательная функция для сохранения полного контента
+  const saveFullContent = async (partialData) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      // Сначала загружаем текущие данные
+      const getResponse = await fetch(`${API_BASE_URL}/content`);
+      if (!getResponse.ok) {
+        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      }
+      const currentData = await getResponse.json();
+      
+      // Объединяем с новыми данными
+      const updatedData = {
+        ...currentData,
+        ...partialData,
+      };
+      
+      // Отправляем полный объект
+      const response = await fetch(`${API_BASE_URL}/content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Password": appConfig.adminPassword,
+        },
+        body: JSON.stringify(updatedData),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return true;
+    } catch (e) {
+      console.error("Failed to save contacts to API:", e);
+      error.value = e.message;
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const addContact = (contact) => {
     const id = Math.max(...contacts.value.map((c) => c.id), 0) + 1;
     const contactType = contactTypes.find((t) => t.value === contact.type);
@@ -73,19 +114,19 @@ export const useContactsStore = defineStore("contacts", () => {
       icon: contactType?.icon || "Globe",
       label: contact.label || contactType?.label,
     });
-    saveToApi();
+    saveFullContent({ contacts: contacts.value });
   };
 
   const removeContact = (id) => {
     contacts.value = contacts.value.filter((c) => c.id !== id);
-    saveToApi();
+    saveFullContent({ contacts: contacts.value });
   };
 
   const updateContact = (id, updates) => {
     const index = contacts.value.findIndex((c) => c.id === id);
     if (index !== -1) {
       contacts.value[index] = { ...contacts.value[index], ...updates };
-      saveToApi();
+      saveFullContent({ contacts: contacts.value });
     }
   };
 
@@ -112,32 +153,6 @@ export const useContactsStore = defineStore("contacts", () => {
     }
   };
 
-  // Сохранение данных в API
-  const saveToApi = async () => {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/content`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Password": localStorage.getItem("adminPassword") || "admin123",
-        },
-        body: JSON.stringify({ contacts: contacts.value }),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return true;
-    } catch (e) {
-      console.error("Failed to save contacts to API:", e);
-      error.value = e.message;
-      throw e;
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
   return {
     contacts,
     availableIcons,
@@ -148,6 +163,5 @@ export const useContactsStore = defineStore("contacts", () => {
     removeContact,
     updateContact,
     loadFromApi,
-    saveToApi,
   };
 });
