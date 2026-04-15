@@ -14,7 +14,7 @@ import {
 import { useAuthStore } from "./auth";
 import { appConfig } from "../config/env";
 
-const API_URL = "http://80.64.17.81:3001/api";
+const API_URL = "https://api.vstor-tech.ru/portfolio/api";
 
 export const useContactsStore = defineStore("contacts", () => {
   // Компоненты иконок для использования в шаблонах
