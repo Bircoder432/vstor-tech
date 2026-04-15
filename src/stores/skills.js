@@ -1,3 +1,4 @@
+// src/stores/skills.js — для консистентности тоже добавлю availableIcons если нужно
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import {
@@ -9,11 +10,23 @@ import {
   Container,
   Monitor,
 } from "lucide-vue-next";
+import { useAuthStore } from "./auth";
 import { appConfig } from "../config/env";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = appConfig.apiUrl;
 
 export const useSkillsStore = defineStore("skills", () => {
+  // Иконки для навыков
+  const availableIcons = {
+    FileCode,
+    FileType,
+    Terminal,
+    Database,
+    GitBranch,
+    Container,
+    Monitor,
+  };
+
   const skillCategories = [
     { value: "language", label: "Programming Language" },
     { value: "frontend", label: "Frontend" },
@@ -24,161 +37,61 @@ export const useSkillsStore = defineStore("skills", () => {
     { value: "system", label: "System" },
   ];
 
-  const skills = ref([
-    {
-      id: 1,
-      name: "JavaScript",
-      category: "language",
-      icon: { type: "vue-component", name: "FileCode" },
-      level: "advanced",
-      description: {
-        en: "ES6+, async/await, closures, event loop",
-        ru: "ES6+, async/await, замыкания, event loop",
-      },
-    },
-    {
-      id: 2,
-      name: "TypeScript",
-      category: "language",
-      icon: { type: "vue-component", name: "FileType" },
-      level: "advanced",
-      description: {
-        en: "Type systems, generics, decorators",
-        ru: "Типизация, дженерики, декораторы",
-      },
-    },
-    {
-      id: 3,
-      name: "Python",
-      category: "language",
-      icon: { type: "vue-component", name: "Terminal" },
-      level: "intermediate",
-      description: {
-        en: "Django, FastAPI, data processing",
-        ru: "Django, FastAPI, обработка данных",
-      },
-    },
-    {
-      id: 4,
-      name: "Git",
-      category: "tools",
-      icon: { type: "vue-component", name: "GitBranch" },
-      level: "advanced",
-      description: {
-        en: "Branching, rebasing, CI/CD integration",
-        ru: "Ветвление, ребейзинг, интеграция CI/CD",
-      },
-    },
-    {
-      id: 5,
-      name: "Docker",
-      category: "devops",
-      icon: { type: "vue-component", name: "Container" },
-      level: "intermediate",
-      description: {
-        en: "Containerization, compose, multi-stage builds",
-        ru: "Контейнеризация, compose, многоэтапные сборки",
-      },
-    },
-    {
-      id: 6,
-      name: "Linux",
-      category: "system",
-      icon: { type: "vue-component", name: "Monitor" },
-      level: "advanced",
-      description: {
-        en: "Bash, systemd, networking, security",
-        ru: "Bash, systemd, сети, безопасность",
-      },
-    },
-    {
-      id: 7,
-      name: "Vue.js",
-      category: "frontend",
-      icon: {
-        type: "external",
-        source: "simple-icons",
-        name: "vuedotjs",
-        url: "https://cdn.simpleicons.org/vuedotjs",
-      },
-      level: "advanced",
-      description: {
-        en: "Composition API, Pinia, Vue Router",
-        ru: "Composition API, Pinia, Vue Router",
-      },
-    },
-    {
-      id: 8,
-      name: "PostgreSQL",
-      category: "database",
-      icon: { type: "vue-component", name: "Database" },
-      level: "intermediate",
-      description: {
-        en: "Query optimization, indexing, transactions",
-        ru: "Оптимизация запросов, индексы, транзакции",
-      },
-    },
-  ]);
-
+  const skills = ref([]);
   const isLoading = ref(false);
   const error = ref(null);
 
-  // Вспомогательная функция для сохранения полного контента
-  const saveFullContent = async (partialData) => {
+  const loadFromApi = async () => {
     isLoading.value = true;
-    error.value = null;
     try {
-      // Сначала загружаем текущие данные
-      const getResponse = await fetch(`${API_BASE_URL}/content`);
-      if (!getResponse.ok) {
-        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      const response = await fetch(`${API_URL}/content`);
+      const data = await response.json();
+      if (data.skills) {
+        skills.value = data.skills;
       }
-      const currentData = await getResponse.json();
-      
-      // Объединяем с новыми данными
-      const updatedData = {
-        ...currentData,
-        ...partialData,
-      };
-      
-      // Отправляем полный объект
-      const response = await fetch(`${API_BASE_URL}/content`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Password": appConfig.adminPassword,
-        },
-        body: JSON.stringify(updatedData),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return true;
     } catch (e) {
-      console.error("Failed to save skills to API:", e);
+      console.error("Failed to load skills:", e);
       error.value = e.message;
-      throw e;
     } finally {
       isLoading.value = false;
     }
   };
 
-  const addSkill = (skill) => {
+  const saveSkills = async () => {
+    const authStore = useAuthStore();
+    try {
+      const response = await fetch(`${API_URL}/content`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Auth-Token": authStore.token,
+        },
+        body: JSON.stringify({ skills: skills.value }),
+      });
+      if (!response.ok) throw new Error("Failed to save");
+      return true;
+    } catch (e) {
+      console.error("Failed to save skills:", e);
+      throw e;
+    }
+  };
+
+  const addSkill = async (skill) => {
     const id = Math.max(...skills.value.map((s) => s.id), 0) + 1;
     skills.value.push({ ...skill, id });
-    saveFullContent({ skills: skills.value });
+    await saveSkills();
   };
 
-  const removeSkill = (id) => {
+  const removeSkill = async (id) => {
     skills.value = skills.value.filter((s) => s.id !== id);
-    saveFullContent({ skills: skills.value });
+    await saveSkills();
   };
 
-  const updateSkill = (id, updates) => {
+  const updateSkill = async (id, updates) => {
     const index = skills.value.findIndex((s) => s.id === id);
     if (index !== -1) {
       skills.value[index] = { ...skills.value[index], ...updates };
-      saveFullContent({ skills: skills.value });
+      await saveSkills();
     }
   };
 
@@ -199,39 +112,17 @@ export const useSkillsStore = defineStore("skills", () => {
     return colors[level] || "#888888";
   };
 
-  // Загрузка данных из API
-  const loadFromApi = async () => {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/content`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      
-      if (data.skills && Array.isArray(data.skills)) {
-        skills.value = data.skills;
-      }
-    } catch (e) {
-      console.error("Failed to load skills from API:", e);
-      error.value = e.message;
-      // Fallback to default values already set
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
   return {
     skills,
     skillCategories,
+    availableIcons, // добавил для консистентности
     isLoading,
     error,
+    loadFromApi,
     addSkill,
     removeSkill,
     updateSkill,
     getDescription,
     getLevelColor,
-    loadFromApi,
   };
 });
